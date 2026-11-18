@@ -188,3 +188,9 @@ Wyniki:
 - Nie sprawdzono: cyklu z prawdziwą mutą i telefonem po przebudowie oraz restartu Maca z włączonym i wyłączonym tetheringiem.
 
 Kopia źródeł sprzed przebudowy: `~/Projects/tetherline-backup-20261117-pre-refactor.tar.gz`.
+
+## Pierwsze wydanie publiczne — 18.11.2026
+
+- Pobrany plik dostaje kwarantannę, a kopie ją dziedziczą (sprawdzone: zwykłe `cp` i `cp -X` zachowują `com.apple.quarantine`). Zakwarantannowana binarka muty z podpisem ad-hoc jest zabijana przy uruchomieniu (exit 137, `spctl`: rejected), po zdjęciu atrybutu działa. Bez poprawki silnik i helper zainstalowane z pobranej aplikacji nie wystartowałyby pod launchd. Instalator zdejmuje teraz kwarantannę z kopii przed weryfikacją SHA-256 i podpisu. Fragment sprawdzono bez roota na zakwarantannowanej kopii. Pełny test roota (`test-control.sh`) nie był po tej zmianie ponownie uruchamiany.
+- Aplikacja i helper są uniwersalne (arm64 + x86_64), jak muta. Wycinek Intel tylko skompilowany; Rosetta na tym Macu nie jest zainstalowana, więc nie uruchomiono go.
+- `scripts/package-release.sh` buduje DMG z dowiązaniem do Aplikacji, montuje go i sprawdza podpis oraz architektury wszystkich trzech plików wykonywalnych. `make test` zaliczone po zmianach.

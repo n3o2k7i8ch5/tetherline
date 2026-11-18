@@ -1,0 +1,57 @@
+# Pushing a tag vX.Y.Z that matches CFBundleShortVersionString tests the code,
+# builds the universal app and publishes the disk image as a GitHub release.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select the newest stable Xcode
+        run: |
+          xcode=$(ls -d /Applications/Xcode_*.app | grep -viE 'beta|release_candidate' | sort -V | tail -1)
+          sudo xcode-select -s "$xcode"
+          xcrun swift --version
+
+      - name: Test and package
+        run: |
+          # Failures are repeated as annotations, readable without access to the logs.
+          step() {
+            local log
+            log=$(mktemp)
+            echo "::group::$*"
+            if "$@" >"$log" 2>&1; then cat "$log"; echo "::endgroup::"; return; fi
+            cat "$log"
+            echo "::endgroup::"
+            local tail
+            tail=$(tail -n 60 "$log")
+            tail=${tail//'%'/'%25'}
+            tail=${tail//$'\r'/'%0D'}
+            tail=${tail//$'\n'/'%0A'}
+            echo "::error title=$1 failed::$tail"
+            exit 1
+          }
+          step swift test
+          step scripts/test-packaging.sh
+          step scripts/test-service-state.sh
+          step scripts/package-release.sh "$GITHUB_REF_NAME"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          image="build/Tetherline-${GITHUB_REF_NAME#v}.dmg"
+          gh release create "$GITHUB_REF_NAME" "$image" "$image.sha256" \
+            --verify-tag --title "Tetherline ${GITHUB_REF_NAME#v}" --notes-file docs/RELEASE_NOTES.md

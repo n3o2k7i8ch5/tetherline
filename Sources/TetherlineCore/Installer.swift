@@ -37,6 +37,11 @@ struct Installer {
         stage_executable() {
           [ ! -L "$1" ] && [ -f "$1" ] || fail 'A bundled executable is not a regular file.'
           /bin/cp "$1" "$stage/$2"
+          # A downloaded app is quarantined and its copies inherit that; a quarantined
+          # ad-hoc executable is killed at launch. The digest and signature below decide trust.
+          if /usr/bin/xattr -p com.apple.quarantine "$stage/$2" >/dev/null 2>&1; then
+            /usr/bin/xattr -d com.apple.quarantine "$stage/$2"
+          fi
           /usr/sbin/chown root:wheel "$stage/$2"
           /bin/chmod -N "$stage/$2"
           /bin/chmod 755 "$stage/$2"

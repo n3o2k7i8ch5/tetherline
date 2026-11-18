@@ -10,15 +10,21 @@ staging=$(mktemp -d "$PWD/.build/bundle.XXXXXX")
 trap 'rm -rf "$staging"' EXIT
 bundle="$staging/Tetherline.app"
 mkdir -p "$bundle/Contents/"{MacOS,Resources}
-xcrun swiftc -swift-version 6 -O -parse-as-library -target arm64-apple-macosx14.0 \
-    Sources/TetherlineCore/*.swift App/*.swift \
-    -framework SwiftUI -framework AppKit -framework ServiceManagement -framework Security -framework CoreWLAN \
-    -o "$bundle/Contents/MacOS/Tetherline"
+# Universal, like the engine: one download for Apple Silicon and Intel Macs.
+compile() {
+    local output=$1
+    shift
+    for arch in arm64 x86_64; do
+        xcrun swiftc -swift-version 6 -O -parse-as-library -target "$arch-apple-macosx14.0" "$@" -o "$staging/$arch"
+    done
+    lipo -create "$staging/arm64" "$staging/x86_64" -output "$output"
+    rm "$staging/arm64" "$staging/x86_64"
+}
+compile "$bundle/Contents/MacOS/Tetherline" Sources/TetherlineCore/*.swift App/*.swift \
+    -framework SwiftUI -framework AppKit -framework ServiceManagement -framework Security -framework CoreWLAN
 # The root controller gets only the code it runs, so unrelated app changes
 # do not alter its digest and do not ask for an administrator update.
-xcrun swiftc -swift-version 6 -O -parse-as-library -target arm64-apple-macosx14.0 \
-    $(scripts/control-sources.sh) \
-    -o "$bundle/Contents/MacOS/TetherlineControl"
+compile "$bundle/Contents/MacOS/TetherlineControl" $(scripts/control-sources.sh)
 cp Resources/Info.plist "$bundle/Contents/Info.plist"
 cp Resources/pl.tetherline.muta.plist "$bundle/Contents/Resources/"
 cp "$vendor/muta" "$bundle/Contents/MacOS/muta"

@@ -1,6 +1,10 @@
 # Tetherline
 
-Natywna aplikacja macOS do tetheringu USB z Androida, oparta na niezmienionym silniku [muta](https://github.com/jost-s/macos-usb-tether-android). Apple Silicon, macOS 14+, SwiftUI i AppKit, bez sandboxa, kextów i rozszerzeń systemowych. Interfejs ma angielski język bazowy oraz automatyczną lokalizację polską.
+Natywna aplikacja macOS do tetheringu USB z Androida, oparta na niezmienionym silniku [muta](https://github.com/jost-s/macos-usb-tether-android). Apple Silicon i Intel (uniwersalna binarka), macOS 14+, SwiftUI i AppKit, bez sandboxa, kextów i rozszerzeń systemowych. Interfejs ma angielski język bazowy oraz automatyczną lokalizację polską.
+
+## Pobieranie
+
+Gotowa aplikacja: [najnowsze wydanie](https://github.com/n3o2k7i8ch5/tetherline/releases/latest). Instrukcja instalacji jest w opisie wydania. Aplikacja nie ma podpisu Developer ID ani notaryzacji, więc pierwsze uruchomienie trzeba zatwierdzić w **Ustawieniach systemowych → Prywatność i ochrona → Otwórz mimo to**. Instalator zdejmuje kwarantannę z kopii silnika i helpera po weryfikacji SHA-256 i podpisu, bo kwarantanna przechodzi na kopie, a system zabija przy starcie niezatwierdzony plik wykonywalny z podpisem ad-hoc.
 
 ## Budowanie
 
@@ -10,7 +14,7 @@ make build
 open build/Tetherline.app
 ```
 
-Wymagane: Xcode z narzędziami wiersza poleceń i Python 3. **Konto Apple, certyfikat Apple Development i odnawianie certyfikatów nie są potrzebne.** Budowanie nakłada lokalny podpis ad-hoc, który pozwala uruchamiać kod ARM na tym Macu. Nie jest to podpis do dystrybucji ani notaryzacja.
+Wymagane: Xcode z narzędziami wiersza poleceń i Python 3. **Konto Apple, certyfikat Apple Development i odnawianie certyfikatów nie są potrzebne.** Budowanie nakłada lokalny podpis ad-hoc, który pozwala uruchamiać kod ARM. Nie jest to podpis do dystrybucji ani notaryzacja.
 
 `make build` pobiera przypiętą mutę i jej licencję, weryfikuje SHA-256 i buduje `build/Tetherline.app`. `make install` instaluje pierwszą kopię w `/Applications`; odmawia nadpisania istniejącej. Aplikacja przed operacjami sprawdza integralność własnej paczki i silnika, akceptując ad-hoc. Uszkodzona lub zmieniona binarka jest odrzucana.
 
@@ -100,6 +104,13 @@ launchctl print system/pl.tetherline.muta
 ```
 
 Audyt niczego nie usuwa. Sprawdza dokładne ścieżki, proces i zadania launchd; sygnalizuje socket mogący należeć do innej muty. Nie usuwa systemowej historii logów ani bazy Background Task Management. Repozytorium i artefakty budowania pozostają osobno.
+
+## Wydanie
+
+1. Podnieś `CFBundleShortVersionString` i `CFBundleVersion` w `Resources/Info.plist` i opisz zmiany w `docs/RELEASE_NOTES.md`.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z`
+
+Tag uruchamia GitHub Actions (`.github/workflows/release.yml`): testy, uniwersalną budowę, obraz `Tetherline-X.Y.Z.dmg` z sumą SHA-256 i publikację wydania. Tag niezgodny z wersją w `Info.plist` zatrzymuje proces. Lokalnie ten sam obraz buduje `scripts/package-release.sh`.
 
 ## Sprawdzenie
 
