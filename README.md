@@ -1,125 +1,87 @@
-# Tetherline
+<p align="center">
+  <img src="docs/images/icon.png" width="128" alt="Tetherline icon">
+</p>
 
-Natywna aplikacja macOS do tetheringu USB z Androida, oparta na niezmienionym silniku [muta](https://github.com/jost-s/macos-usb-tether-android). Apple Silicon i Intel (uniwersalna binarka), macOS 14+, SwiftUI i AppKit, bez sandboxa, kextów i rozszerzeń systemowych. Interfejs ma angielski język bazowy oraz automatyczną lokalizację polską.
+<h1 align="center">Tetherline</h1>
 
-## Pobieranie
+<p align="center">
+  Android USB tethering for macOS, from the menu bar.<br>
+  <a href="https://github.com/n3o2k7i8ch5/tetherline/releases/latest"><b>Download the latest release</b></a>
+</p>
 
-Gotowa aplikacja: [najnowsze wydanie](https://github.com/n3o2k7i8ch5/tetherline/releases/latest). Instrukcja instalacji jest w opisie wydania. Aplikacja nie ma podpisu Developer ID ani notaryzacji, więc pierwsze uruchomienie trzeba zatwierdzić w **Ustawieniach systemowych → Prywatność i ochrona → Otwórz mimo to**. Instalator zdejmuje kwarantannę z kopii silnika i helpera po weryfikacji SHA-256 i podpisu, bo kwarantanna przechodzi na kopie, a system zabija przy starcie niezatwierdzony plik wykonywalny z podpisem ad-hoc.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/menu-dark.png">
+    <img src="docs/images/menu-light.png" width="380" alt="Tetherline menu: connected over USB">
+  </picture>
+</p>
 
-## Budowanie
+macOS does not support Android USB tethering out of the box. Tetherline gives your Mac the phone's internet connection over a USB cable, with no kernel extensions or drivers. It runs [muta](https://github.com/jost-s/macos-usb-tether-android), an open-source tethering engine, as a background service and adds a menu bar app to control it.
 
-```sh
-make test
-make build
-open build/Tetherline.app
-```
+## Features
 
-Wymagane: Xcode z narzędziami wiersza poleceń i Python 3. **Konto Apple, certyfikat Apple Development i odnawianie certyfikatów nie są potrzebne.** Budowanie nakłada lokalny podpis ad-hoc, który pozwala uruchamiać kod ARM. Nie jest to podpis do dystrybucji ani notaryzacja.
+- Turn tethering on and off from the menu bar, and see the device, IP address, interface and packet counts.
+- The administrator password is needed once, at installation. Turning tethering on and off afterwards needs none.
+- Tethering comes back after a restart only if you left it on.
+- Warns when traffic may still go through Wi-Fi or a VPN, and when another muta installation is running.
+- Optional launch at login. The menu bar and Dock icons can each be hidden.
+- English and Polish.
 
-`make build` pobiera przypiętą mutę i jej licencję, weryfikuje SHA-256 i buduje `build/Tetherline.app`. `make install` instaluje pierwszą kopię w `/Applications`; odmawia nadpisania istniejącej. Aplikacja przed operacjami sprawdza integralność własnej paczki i silnika, akceptując ad-hoc. Uszkodzona lub zmieniona binarka jest odrzucana.
+## Requirements
 
-Opcjonalny `SIGN_IDENTITY='ODCISK_CERTYFIKATU' make build` nadal działa, ale usługa nie wymaga certyfikatu Apple. Historyczne skrypty `probe-signing.sh` i `check-signing.sh` nie należą do zwykłego procesu budowania.
+- macOS 14 Sonoma or later, on Apple Silicon or Intel.
+- An Android phone with USB tethering, and a USB data cable.
 
-## Używanie
+## Installation
 
-1. Uruchom `/Applications/Tetherline.app`.
-2. Wybierz **Enable tethering**. Przy pierwszym włączeniu, i po aktualizacji aplikacji zmieniającej komponenty systemowe, zatwierdź systemową prośbę administratora.
-3. Podłącz telefon i włącz tethering USB na Androidzie.
+1. Download `Tetherline-X.Y.Z.dmg` from the [latest release](https://github.com/n3o2k7i8ch5/tetherline/releases/latest), open it and drag Tetherline to Applications.
+2. Open Tetherline. The app is not signed with an Apple Developer ID, so macOS blocks the first launch. Click **Done**, then go to **System Settings → Privacy & Security** and click **Open Anyway**.
+3. In the menu bar, choose **Enable tethering** and enter your administrator password.
+4. Connect the phone and turn on **USB tethering** in Android's settings.
 
-Instalacja kopiuje silnik i helper sterujący do chronionego katalogu oraz tworzy dwie konfiguracje `launchd` i log. Nie wykonuje `muta install`. Konfiguracja usługi zostaje na stałe; **Enable tethering** i **Turn off** przełączają ją systemowym przełącznikiem launchd (`enable`/`disable`). Ten przełącznik decyduje też o starcie po restarcie systemu: usługa wraca po restarcie wtedy i tylko wtedy, gdy była włączona. Zwykłe Enable, Turn off i Quit korzystają z helpera i nie pytają o hasło. Aplikacja nie przechowuje hasła i nie zmienia sudoers.
+To uninstall, choose **Settings → Uninstall…**, which removes the background service, its files and logs. Then move Tetherline to the Trash.
 
-Hasło jest potrzebne tylko, gdy zainstalowane komponenty różnią się od paczki aplikacji: przy pierwszej instalacji, po aktualizacji muty lub helpera i przy odinstalowaniu. Aplikacja porównuje SHA-256 plików wykonywalnych i treść konfiguracji `launchd`; wtedy w stanie wyłączonym informuje, że włączenie poprosi o zgodę.
+## How it works
 
-**Quit** w menu, **Quit Tetherline** w Settings, ⌘Q i Quit z Docka zatrzymują usługę przed zamknięciem aplikacji, bez hasła. Błąd zatrzymania pozostawia aplikację otwartą z komunikatem. Ustawienie uruchamiania interfejsu przy logowaniu pozostaje zapisane; zatrzymana usługa wymaga ponownego wybrania Enable tethering.
+Enabling tethering for the first time installs two components to `/Library/Application Support/Tetherline`, both owned by root:
 
-Interfejs pokazuje jeden stan: sprawdzanie, wyłączone, włączanie, wyłączanie, oczekiwanie na telefon, połączono, wymagana zgoda, inna muta lub błąd. Stan pochodzi z `launchd`, listy procesów i `muta status` zainstalowanego silnika, odczytywanych bez roota co sekundę przy otwartym panelu lub oknie i co pięć sekund w tle. Podczas włączania i wyłączania aplikacja nie odczytuje stanu, tylko pokazuje trwającą operację, a wynik publikuje po jej zakończeniu. Stany pośrednie (zadanie w trakcie wyładowania, silnik jeszcze bez gniazda stanu) nie są więc pokazywane jako błędy. Helper kończy start dopiero, gdy muta odpowiada, a stop, gdy proces silnika zniknął. Awaria działającej usługi usuwa dane połączenia, pokazuje czerwony błąd i zmienia ikonę. Spóźniony odczyt nie może nadpisać nowszego stanu. Oznaczenie USB potwierdza połączenie z telefonem, nie dostęp do internetu. Błąd operacji pozostaje widoczny po zamknięciu alertu, do kolejnej próby. **Liczniki `in` i `out` oznaczają pakiety, nie bajty ani prędkość.**
+- a copy of muta;
+- a small helper.
 
-Inna muta w trybie usługi (`muta run`), np. instalacja upstream, blokuje włączenie i jest pokazywana jako konflikt. Krótkie wywołania `muta status` nie są konfliktem.
+Each runs as a LaunchDaemon. The helper is started by launchd on demand, accepts only *start* and *stop* from the account that installed it, and exits when idle. That is why turning tethering on and off needs no password.
 
-Komunikat o trasie porównuje interfejs muty z domyślną trasą IPv4 i interfejsami Wi-Fi z CoreWLAN. Nie jest gwarancją trasy każdego pakietu: VPN, szczegółowe trasy i IPv6 mogą zachowywać się inaczej. Aplikacja nie zmienia priorytetów interfejsów ani konfiguracji VPN.
+The app checks the SHA-256 and code signature of every component before installing it. After an update, it asks for the password only if the engine or the helper changed. The app reads the connection state from launchd and `muta status` without root privileges.
 
-## Menu i ustawienia
+More documentation, in Polish:
 
-Przyciski menu, Settings i potwierdzeń korzystają ze wspólnego stylu (kapsuła, wysokość 34 pt). Neutralny wariant służy m.in. Cancel, Settings i View log; czerwony odinstalowaniu.
+- [docs/DESIGN.md](docs/DESIGN.md): behaviour and security model.
+- [docs/BRIEF.md](docs/BRIEF.md): the original brief.
+- [docs/VALIDATION.md](docs/VALIDATION.md): test results.
 
-**Settings → App visibility** zawiera niezależne **Show in menu bar** i **Show in Dock**. Domyślnie widoczna jest tylko ikona paska menu. Wszystkie cztery kombinacje są zapamiętywane. Przy obu ikonach ukrytych ręczne otwarcie aplikacji z folderu Aplikacje pokazuje Settings. Kliknięcie Docka otwiera okno połączenia. Zmiany widoczności i zamykanie okien nie zatrzymują tetheringu.
+## Building from source
 
-**Launch at login** dotyczy tylko interfejsu. Używa osobnego LaunchAgenta użytkownika, bez certyfikatu i bez uprawnień administratora. Rejestracja nie tworzy drugiej instancji otwartej aplikacji. Uruchomienie przy logowaniu respektuje ukryte ikony i nie otwiera automatycznie okna ustawień. System może osobno ograniczyć działanie w tle; jeśli zgłosi brak zgody, aplikacja odsyła do Ustawień systemowych.
-
-Ikona paska menu to SF Symbol `personalhotspot`, a przy wyłączonej usłudze `personalhotspot.slash`. Grubość semibold i pole rysowania 23 × 19 pt poprawiają czytelność. Grafitową ikonę Docka generuje `scripts/render-app-icon.swift` we wszystkich rozmiarach `.icns`.
-
-Pasek menu i cykl życia obsługuje AppKit (`NSStatusItem`, `NSPopover`, `NSWindow`), a zawartość SwiftUI. Panel zna rozmiar treści przed otwarciem, jest zakotwiczony pod paskiem menu i zamyka się po ponownym kliknięciu, Escape lub kliknięciu poza nim. Język aplikacji można zmienić w systemowych ustawieniach Language & Region → Applications.
-
-## Pliki i bezpieczeństwo usługi
-
-Paczka zawiera interfejs, mutę, helper TetherlineControl, licencję, wersję, lokalizacje, ikonę oraz referencyjny plist. Podczas instalowania rzeczywisty plist powstaje z konfiguracji skompilowanej w aplikacji. Weryfikuje go również test zgodności z plikiem referencyjnym.
-
-Poza paczką występują:
-
-- `/Library/Application Support/Tetherline/muta` — chroniona kopia silnika, root:wheel, 0755; katalog 0755.
-- `/Library/Application Support/Tetherline/TetherlineControl` — ograniczony helper, root:wheel, 0755.
-- `/Library/Application Support/Tetherline/control.sock` — socket sterujący tworzony przez launchd; dostęp do poleceń wymaga właściwego UID klienta.
-- `/Library/LaunchDaemons/pl.tetherline.control.plist` — aktywacja helpera na żądanie i UID konta instalującego.
-- `/Library/Logs/Tetherline/control.log` — log helpera.
-- `/Library/LaunchDaemons/pl.tetherline.muta.plist` — stała konfiguracja usługi, root:wheel, 0644. Włączenie i start po restarcie wynikają z przełącznika `launchctl enable/disable`.
-- `/Library/Logs/Tetherline/muta.log` — log, root:wheel, 0644; katalog 0755.
-- `~/Library/LaunchAgents/pl.tetherline.app.plist` — tylko gdy włączono uruchamianie interfejsu przy logowaniu.
-- Preferencje `pl.tetherline.app`, cache i saved state tworzone przez macOS.
-- `/var/run/muta.sock` — stała ścieżka zaszyta w upstream. Socket stanu jest dostępny także bez roota; niezmodyfikowana muta wymaga go do `muta status`.
-
-To świadoma zmiana względem pierwotnego briefu: użytkownik wybrał działanie bez certyfikatu Apple zamiast utrzymywania helpera wyłącznie w paczce przez `SMAppService.daemon`.
-
-Usługa używa bezwzględnej ścieżki chronionej kopii, `muta run`, `RunAtLoad`, `KeepAlive` i `ProcessType = Standard`. Nie uruchamia kodu roota bezpośrednio z paczki, którą użytkownik może zastąpić.
-
-Instalator jest jeden dla pierwszej instalacji i aktualizacji. Doprowadza system do stanu paczki i zmienia tylko to, co się różni; ponowne uruchomienie niczego nie zmienia. Odrzuca dowiązania symboliczne, pliki z wieloma hardlinkami, nieprawidłowych właścicieli, katalogi i pliki zapisywalne przez innych oraz nieoczekiwane ACL. Kopiuje pliki do tymczasowego katalogu roota, sprawdza ich SHA-256 względem wartości odczytanych przed autoryzacją i weryfikuje podpis ad-hoc. Dopiero wtedy podmienia docelowe pliki. Wymiana helpera nie przerywa działającego silnika. Wymiana silnika lub jego konfiguracji restartuje go tylko, jeśli działał. Wyłączony silnik zostaje wyłączony również po restarcie systemu. Blokada operacji chroni przed równoczesną instalacją i usuwaniem.
-
-Helper sterujący ma tylko dwa polecenia: `start` i `stop`. Nie przyjmuje ścieżek, argumentów procesu, kodu ani poleceń powłoki; start i stop wykonuje bez powłoki. Ścieżki i etykiety są skompilowane w helperze, a przed startem sprawdza on właściciela, uprawnienia i treść zainstalowanej konfiguracji. `getpeereid` weryfikuje UID klienta: dostęp ma tylko konto wskazane przy instalacji oraz root. Klient wymaga serwera z UID 0. Błędy helper zgłasza stałymi kodami, które aplikacja tłumaczy. To uprawnienie dla konta, a nie konkretnej aplikacji: inne programy tego samego użytkownika mogą włączać i wyłączać wyłącznie tę usługę. Nie mogą wykonać dowolnego polecenia jako root. Helper jest kompilowany tylko z potrzebnych mu plików, więc zmiany samego interfejsu nie zmieniają jego sumy i nie wymagają hasła.
-
-Helper używa aktywacji socketem [launch_activate_socket](https://developer.apple.com/documentation/xpc/launch_activate_socket) i [konfiguracji launchd Apple](https://github.com/apple-oss-distributions/launchd/blob/main/man/launchd.plist.5). Nie ma KeepAlive ani RunAtLoad; po sekundzie bezczynności proces kończy działanie, a uruchamia się tylko przy starcie i zatrzymaniu, nie przy odczycie stanu. Zapisuje krótki dziennik poleceń w `control.log`.
-
-Podpis ad-hoc sprawdza integralność, ale nie tożsamość wydawcy. Systemowa zgoda administratora oznacza zaufanie do uruchomionej lokalnej aplikacji. Nie jest to model dystrybucji podpisanej i notaryzowanej aplikacji dla innych użytkowników.
-
-Pliki `.stage.*` oraz `.operation-lock` są tymczasowe i usuwane po zakończeniu operacji. Po wymuszonym zabiciu procesu instalatora mogą wymagać ręcznego usunięcia z chronionego katalogu, po upewnieniu się, że żadna operacja nie trwa. Nie ma automatycznej rotacji logu: muta v0.1.5 obsługuje ponowne otwarcie logu wyłącznie pod swoją oryginalną ścieżką. Po wyłączeniu usługi można opróżnić log.
-
-## Aktualizacja
+You need Xcode with its command line tools and Python 3. No Apple account or certificate is required.
 
 ```sh
-./scripts/bump-muta.sh v0.1.5  # zastąp tagiem wybranego wydania
-make build
+make test     # unit, packaging and app model tests
+make build    # build/Tetherline.app, ad-hoc signed
+make install  # first copy to /Applications
 ```
 
-`Vendor/muta.version` jest jedynym źródłem wersji i zawiera tag oraz sumy SHA-256 archiwum i licencji. Skrypt sprawdza publikowaną sumę, jeśli wydanie ją udostępnia; tylko HTTP 404 pozwala użyć sumy obliczonej lokalnie. Błąd sieci lub rozbieżność zatrzymuje aktualizację. Cache jest sprawdzany przy każdym budowaniu, a błędne pobranie go nie zastępuje. Z archiwum pobierana jest jedna zwykła binarka bez rozpakowywania dowiązań. Kod muty nie jest modyfikowany.
+The build downloads the muta release pinned in `Vendor/muta.version` and verifies its SHA-256. To move to another muta release, run `scripts/bump-muta.sh vX.Y.Z`.
 
-Zastąpienie `.app` niczego nie podmienia w systemie. Jeśli nowa paczka zawiera inny silnik lub helper, aplikacja w stanie wyłączonym zapowiada prośbę o zgodę, a **Enable tethering** aktualizuje komponenty i włącza usługę. Działający tethering nie jest przerywany do czasu Turn off i ponownego Enable. Nie nadpisuj chronionych plików ręcznie podczas pracy.
+## Releasing
 
-## Odinstalowanie
-
-**Uninstall…** wyłącza autostart interfejsu, zatrzymuje helper i usługę, czeka na zakończenie procesów i usuwa oba plisty, chronione binarki, socket sterujący, logi oraz puste katalogi. Nie usuwa nieznanych plików w katalogach; wtedy zgłasza błąd. Socket stanu muty usuwa tylko, gdy nie działa żadna muta. Czyści własne preferencje, cache i saved state, a następnie wskazuje aplikację w Finderze i kończy działanie. Przenieś `.app` do Kosza. Wpis przełącznika `launchd` dla etykiety usługi pozostaje w systemowej bazie launchd; nie jest plikiem aplikacji i nie ma wpływu bez jej konfiguracji.
-
-Wcześniejsza instalacja muty spoza Tetherline nie jest już migrowana automatycznie. Jeśli działa, aplikacja pokazuje konflikt; usuń ją poleceniem `sudo muta uninstall`.
+1. Bump `CFBundleShortVersionString` and `CFBundleVersion` in `Resources/Info.plist`.
+2. Describe the release in `docs/RELEASE_NOTES.md`.
+3. Push a matching tag:
 
 ```sh
-./scripts/verify-uninstalled.sh
-launchctl print system/pl.tetherline.muta
+git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
-Audyt niczego nie usuwa. Sprawdza dokładne ścieżki, proces i zadania launchd; sygnalizuje socket mogący należeć do innej muty. Nie usuwa systemowej historii logów ani bazy Background Task Management. Repozytorium i artefakty budowania pozostają osobno.
+GitHub Actions then runs the tests, builds the universal app and publishes `Tetherline-X.Y.Z.dmg` with its SHA-256. `scripts/package-release.sh` builds the same image locally.
 
-## Wydanie
+## Credits
 
-1. Podnieś `CFBundleShortVersionString` i `CFBundleVersion` w `Resources/Info.plist` i opisz zmiany w `docs/RELEASE_NOTES.md`.
-2. `git tag vX.Y.Z && git push origin vX.Y.Z`
-
-Tag uruchamia GitHub Actions (`.github/workflows/release.yml`): testy, uniwersalną budowę, obraz `Tetherline-X.Y.Z.dmg` z sumą SHA-256 i publikację wydania. Tag niezgodny z wersją w `Info.plist` zatrzymuje proces. Lokalnie ten sam obraz buduje `scripts/package-release.sh`.
-
-## Sprawdzenie
-
-- `make test`: parser, procesy, odczyt stanu `launchd`, fazy interfejsu, porównanie instalacji, skrypty instalatora, protokół helpera, preferencje, pakowanie oraz model aplikacji (m.in. brak błędu podczas wyłączania, częstotliwość odczytów, zamykanie).
-- `bash scripts/test-control.sh`: wymaga systemowej zgody administratora. Izolowana kopia usługi z atrapą silnika, która tylko sprawdza UID 0 i czeka: odrzucanie złej sumy i dowiązań, instalacja, idempotencja, aktualizacja bez restartu i z restartem, start/stop jako zwykły użytkownik, przełącznik startu po restarcie, konflikt z inną mutą, migracja poprzedniego układu, aktywacja na żądanie, odrzucanie innego konta i poleceń, pełne odinstalowanie. Nie uruchamia muty ani nie dotyka USB. `--prepare-only` przygotowuje skrypt do przejrzenia; `--install-production` po zaliczeniu testów instaluje lub aktualizuje komponenty z `build/Tetherline.app` w tej samej autoryzacji.
-- `bash scripts/test-quit.sh`: rzeczywisty cykl zamykania AppKit z kontrolowanym, opóźnionym zatrzymaniem usługi.
-- `bash scripts/test-login-item.sh`: instaluje i usuwa osobny LaunchAgent uruchamiający `/usr/bin/true`; nie zmienia autostartu właściwej aplikacji.
-- `bash scripts/test-visibility.sh` oraz `bash scripts/test-popover.sh`: testy GUI w izolowanych domenach preferencji; wymagają sesji graficznej.
-- `./scripts/render-previews.sh`: rzeczywiste podglądy SwiftUI wszystkich stanów EN/PL w jasnym i ciemnym motywie w `.build/previews`.
-- `/Applications/Tetherline.app/Contents/MacOS/Tetherline --diagnose`: odczyt stanu instalacji i usługi bez zmian w systemie.
-
-Wyniki, ograniczenia i historyczny test certyfikatu opisano w [docs/VALIDATION.md](docs/VALIDATION.md). Test helpera nie zastępuje testu połączenia z telefonem ani restartu całego Maca.
+Tetherline bundles [muta](https://github.com/jost-s/macos-usb-tether-android) by Jost Schulte (MIT License), unmodified.
