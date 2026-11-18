@@ -33,7 +33,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text("App visibility").font(.system(size: 13, weight: .semibold))
                 Toggle(isOn: Binding(
-                    get: { model.presentation.showInMenuBar }, set: model.setMenuBarVisible
+                    get: { model.presentation.showInMenuBar }, set: { model.setMenuBarVisible($0) }
                 )) {
                     Text("Show in menu bar").font(.system(size: 13, weight: .medium))
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -41,7 +41,7 @@ struct SettingsView: View {
                 .toggleStyle(.switch)
                 Divider()
                 Toggle(isOn: Binding(
-                    get: { model.presentation.showInDock }, set: model.setDockVisible
+                    get: { model.presentation.showInDock }, set: { model.setDockVisible($0) }
                 )) {
                     Text("Show in Dock").font(.system(size: 13, weight: .medium))
                         .frame(maxWidth: .infinity, alignment: .leading)
